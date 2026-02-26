@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的Automix歌单 - 混音编辑器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            background: #f5f5f5;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+        
+        .custom-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            outline: none;
+        }
+        
+        .custom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #ff4d4f;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(255, 77, 79, 0.3);
+            border: 2px solid #fff;
+        }
+        
+        .wave-bar {
+            width: 2px;
+            background: #ff4d4f;
+            border-radius: 1px;
+            transition: all 0.1s ease;
+        }
+        
+        .wave-bar.active {
+            background: #ff7875;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        
+        .safe-top {
+            padding-top: env(safe-area-inset-top, 0px);
+        }
+        .safe-bottom {
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        
+        .edit-mix-btn {
+            background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+            box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+        }
+        
+        .edit-mix-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .volume-curve {
+            stroke: #ff4d4f;
+            stroke-width: 2;
+            fill: none;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen pb-24">
+
+    <!-- 歌单详情页 -->
+    <div id="playlistView" class="min-h-screen">
+        <!-- 顶部导航 -->
+        <header class="fixed top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent safe-top">
+            <div class="flex items-center justify-between px-4 h-12">
+                <button class="w-8 h-8 flex items-center justify-center text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <div class="flex items-center gap-4">
+                    <button class="w-8 h-8 flex items-center justify-center text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </button>
+                    <button class="w-8 h-8 flex items-center justify-center text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 歌单头部信息 -->
+        <div class="relative bg-gray-800 pt-20 pb-8 px-4">
+            <div class="absolute inset-0 overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-b from-gray-700 to-gray-900"></div>
+                <div class="absolute inset-0 bg-black/20"></div>
+            </div>
+            
+            <div class="relative flex gap-4">
+                <div class="w-32 h-32 rounded-lg overflow-hidden shadow-2xl flex-shrink-0">
+                    <img src="https://picsum.photos/seed/automix/300/300" alt="Cover" class="w-full h-full object-cover">
+                </div>
+                
+                <div class="flex-1 flex flex-col justify-end text-white">
+                    <h1 class="text-xl font-bold mb-2">我的Automix歌单</h1>
+                    <div class="flex items-center gap-2 mb-2">
+                        <img src="https://picsum.photos/seed/user/24/24" class="w-5 h-5 rounded-full">
+                        <span class="text-sm text-gray-300">神鹿大大人</span>
+                    </div>
+                    <p class="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+                        已为你生成「智能过渡·Automix」歌单，保存歌单并打开「智能过渡」播放设置，就像听一首精心...
+                    </p>
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="relative flex gap-3 mt-6">
+                <button class="flex-1 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center gap-1.5 text-white text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                    分享
+                </button>
+                <button class="flex-1 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center gap-1.5 text-white text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    评论
+                </button>
+                <button class="flex-1 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center gap-1.5 text-white text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                    收藏
+                </button>
+            </div>
+        </div>
+
+        <!-- 歌曲列表头部 -->
+        <div class="bg-white rounded-t-3xl -mt-4 relative z-10 px-4 pt-6 pb-2">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <button class="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg shadow-red-500/30">
+                        <svg class="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <div>
+                        <div class="text-lg font-bold text-gray-900">播放全部</div>
+                        <div class="text-xs text-gray-500">27首 · 1小时37分钟</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    </button>
+                    <button class="text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 歌曲列表 -->
+        <div class="bg-white px-4" id="songList"></div>
+    </div>
+
+    <!-- 混音编辑页面 -->
+    <div id="editorView" class="fixed inset-0 z-50 bg-gray-100 hidden flex-col">
+        <!-- 头部 -->
+        <header class="glass border-b border-gray-200 px-4 h-14 flex items-center justify-between flex-shrink-0 safe-top">
+            <div class="flex items-center gap-3">
+                <button onclick="closeEditor()" class="w-8 h-8 flex items-center justify-center text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+                <div>
+                    <h2 class="text-base font-bold text-gray-900">设置衔接点</h2>
+                    <p class="text-xs text-gray-500" id="editorSubtitle">歌曲A → 歌曲B</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- 内容区 -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+            
+            <!-- 混音过渡片段模块 -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
+                            <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900">混音过渡片段</h3>
+                            <p class="text-xs text-gray-500" id="previewStatus">点击试听衔接效果</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleMixPreview()" id="previewBtn" class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg shadow-red-500/30">
+                            <svg id="previewIcon" class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                        <button onclick="saveMix()" class="px-3 py-1.5 bg-gray-900 text-white rounded-full text-xs font-medium">
+                            保存
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 可视化区域 -->
+                <div class="relative h-28 bg-gray-900 rounded-xl overflow-hidden mb-3">
+                    <div class="absolute inset-0 opacity-10" style="background-image: linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px); background-size: 20px 20px;"></div>
+                    
+                    <div class="absolute left-0 top-0 bottom-0 w-[45%] flex items-center justify-end gap-[2px] pr-2" id="transWaveA"></div>
+                    <div class="absolute right-0 top-0 bottom-0 w-[45%] flex items-center justify-start gap-[2px] pl-2" id="transWaveB"></div>
+                    
+                    <div class="absolute left-[45%] right-[45%] top-0 bottom-0 bg-gradient-to-r from-red-500/10 to-orange-500/10"></div>
+                    
+                    <svg class="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+                        <path d="M 0,30 Q 80,30 160,100" class="volume-curve" style="stroke: #ff4d4f;"/>
+                        <path d="M 160,100 Q 240,30 320,30" class="volume-curve" style="stroke: #ff7875;"/>
+                    </svg>
+                    
+                    <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30 transform -translate-x-1/2"></div>
+                    <div class="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] transform -translate-x-1/2 transition-all duration-75 z-20" id="transPlayhead" style="left: 0%"></div>
+                    
+                    <div class="absolute bottom-2 left-2 text-[10px] text-red-400 font-mono bg-black/50 px-1.5 rounded" id="transTimeA">-8s</div>
+                    <div class="absolute bottom-2 right-2 text-[10px] text-orange-400 font-mono bg-black/50 px-1.5 rounded" id="transTimeB">+8s</div>
+                    <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-white font-medium bg-black/50 px-2 rounded-full">衔接点</div>
+                    
+                    <div class="absolute top-2 left-2 text-[9px] text-gray-400 bg-black/30 px-1.5 rounded">...结尾</div>
+                    <div class="absolute top-2 right-2 text-[9px] text-gray-400 bg-black/30 px-1.5 rounded">开头...</div>
+                </div>
+
+                <div class="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5">
+                    <svg class="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p>试听时会自动循环播放过渡片段，您可以调整下方两首歌的衔接点来获得最佳混音效果。</p>
+                </div>
+            </div>
+
+            <!-- 警告 -->
+            <div id="warningBox" class="hidden bg-orange-50 border border-orange-200 rounded-xl p-3 flex items-start gap-2">
+                <svg class="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <div class="text-xs text-orange-700">
+                    <p class="font-medium">衔接效果可能不佳</p>
+                    <p class="text-orange-600/70" id="warningText">建议调整衔接点位置</p>
+                </div>
+            </div>
+
+            <!-- 歌曲A -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm" id="songACard">
+                <div class="flex items-center gap-3 mb-3">
+                    <img src="" alt="Cover" id="coverA" class="w-12 h-12 rounded-lg object-cover bg-gray-200">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <span class="px-1.5 py-0.5 bg-red-50 text-red-500 text-[10px] rounded font-medium">前一首</span>
+                            <span class="text-[10px] text-gray-400">结尾区域</span>
+                        </div>
+                        <h3 class="text-sm font-bold text-gray-900 truncate" id="songAName">--</h3>
+                        <p class="text-xs text-gray-500 truncate" id="songAArtist">--</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-base font-mono font-bold text-red-500" id="timeA">--</div>
+                        <div class="text-[10px] text-gray-400" id="endTimeA">结束于 --</div>
+                    </div>
+                </div>
+
+                <div class="relative h-20 bg-gray-100 rounded-xl overflow-hidden mb-2">
+                    <div class="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-gray-100 to-transparent z-10"></div>
+                    <div class="absolute inset-0 flex items-center justify-end gap-[2px] px-3" id="waveformA" style="padding-left: 15%;"></div>
+                    <div class="absolute top-0 bottom-0 w-0.5 bg-red-500 shadow-[0_0_8px_rgba(255,77,79,0.6)] transition-all duration-75 z-20" id="playheadA" style="left: 0%"></div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between text-[10px] text-gray-400 px-1">
+                        <span id="startRangeA">--</span>
+                        <span id="durationA">--</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="70" class="custom-slider" id="sliderA">
+                    <div class="flex justify-between text-[10px] px-1">
+                        <span class="text-gray-400">在结尾区域内拖动</span>
+                        <span class="text-red-500 font-medium" id="remainingA">距结束 --s</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mt-3">
+                    <button onclick="playSong('A')" id="playBtnA" class="w-9 h-9 rounded-full bg-gray-100 active:bg-gray-200 flex items-center justify-center text-gray-700">
+                        <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button onclick="stopSong('A')" class="w-8 h-8 rounded-full bg-gray-100 active:bg-gray-200 flex items-center justify-center text-gray-500">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                    </button>
+                    <div class="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden ml-2">
+                        <div class="h-full bg-red-500 w-0 transition-all duration-100" id="progressA"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 歌曲B -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm" id="songBCard">
+                <div class="flex items-center gap-3 mb-3">
+                    <img src="" alt="Cover" id="coverB" class="w-12 h-12 rounded-lg object-cover bg-gray-200">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <span class="px-1.5 py-0.5 bg-orange-50 text-orange-500 text-[10px] rounded font-medium">后一首</span>
+                            <span class="text-[10px] text-gray-400">开头区域</span>
+                        </div>
+                        <h3 class="text-sm font-bold text-gray-900 truncate" id="songBName">--</h3>
+                        <p class="text-xs text-gray-500 truncate" id="songBArtist">--</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-base font-mono font-bold text-orange-500" id="timeB">--</div>
+                        <div class="text-[10px] text-gray-400" id="startTimeB">开始于 0:00</div>
+                    </div>
+                </div>
+
+                <div class="relative h-20 bg-gray-100 rounded-xl overflow-hidden mb-2">
+                    <div class="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-gray-100 to-transparent z-10"></div>
+                    <div class="absolute inset-0 flex items-center justify-start gap-[2px] px-3" id="waveformB" style="padding-right: 15%;"></div>
+                    <div class="absolute top-0 bottom-0 w-0.5 bg-orange-500 shadow-[0_0_8px_rgba(255,120,117,0.6)] transition-all duration-75 z-20" id="playheadB" style="left: 0%"></div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between text-[10px] text-gray-400 px-1">
+                        <span>0:00</span>
+                        <span id="endRangeB">--</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="15" class="custom-slider" id="sliderB">
+                    <div class="flex justify-between text-[10px] px-1">
+                        <span class="text-gray-400">在开头区域内拖动</span>
+                        <span class="text-orange-500 font-medium" id="remainingB">距开始 --s</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mt-3">
+                    <button onclick="playSong('B')" id="playBtnB" class="w-9 h-9 rounded-full bg-gray-100 active:bg-gray-200 flex items-center justify-center text-gray-700">
+                        <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button onclick="stopSong('B')" class="w-8 h-8 rounded-full bg-gray-100 active:bg-gray-200 flex items-center justify-center text-gray-500">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                    </button>
+                    <div class="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden ml-2">
+                        <div class="h-full bg-orange-500 w-0 transition-all duration-100" id="progressB"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部迷你播放器 -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white mini-player safe-bottom z-30">
+        <div class="flex items-center gap-3 px-4 py-3">
+            <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden animate-[spin_8s_linear_infinite]">
+                <img src="https://picsum.photos/seed/playing/100/100" class="w-full h-full object-cover">
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium text-gray-900 truncate">触电 (R&B版)</div>
+                <div class="text-xs text-gray-500">陆烚</div>
+            </div>
+            <button class="w-10 h-10 flex items-center justify-center text-gray-900">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+            <button class="w-10 h-10 flex items-center justify-center text-gray-900">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- 确认弹窗 -->
+    <div id="cancelModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl">
+            <h3 class="text-lg font-bold text-gray-900 mb-2">放弃编辑？</h3>
+            <p class="text-sm text-gray-500 mb-5">未保存的衔接点设置将会丢失。</p>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeCancelModal()" class="px-4 py-2 text-sm text-gray-600 font-medium">取消</button>
+                <button onclick="confirmCancel()" class="px-4 py-2 text-sm text-red-500 font-medium">放弃</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 保存成功提示 -->
+    <div id="successToast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-5 py-2.5 rounded-full shadow-xl transform -translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 z-50 text-sm font-medium">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <span>保存成功</span>
+    </div>
+
+    <script>
+        const songs = [
+            { id: 1, name: "If You Love Me (feat. 박재범)", artist: "NS 允智 / 朴宰范", album: "The Way 2...", duration: 215, cover: "song1", tags: ["超清母带"] },
+            { id: 2, name: "Girls Never Die", artist: "tripleS", album: "<ASSEMBLE24>", duration: 196, cover: "song2", tags: ["VIP", "超清母带"] },
+            { id: 3, name: "붉은 노을 (红霞)", artist: "BIGBANG", album: "Remember", duration: 243, cover: "song3", tags: ["VIP", "超清母带"] },
+            { id: 4, name: "INSECURE", artist: "Gordon Flanders", album: "INSECURE", duration: 184, cover: "song4", tags: ["VIP", "超清母带"] },
+            { id: 5, name: "no tears left to cry", artist: "Ariana Grande", album: "Sweetener", duration: 205, cover: "song5", tags: ["VIP", "超清母带"] },
+            { id: 6, name: "Shallow", artist: "Lady Gaga/Bradley Cooper", album: "A Star Is Born", duration: 216, cover: "song6", tags: ["VIP", "超清母带"] },
+            { id: 7, name: "Long D", artist: "JACE 陈凯咏", album: "Long D", duration: 198, cover: "song7", tags: ["超清母带"] },
+            { id: 8, name: "기대해 (期待)", artist: "Girl's Day", album: "기대", duration: 203, cover: "song8", tags: ["VIP", "超清母带"] }
+        ];
+
+        let currentPair = 0;
+        let isMixing = false;
+        let playIntervals = {};
+        let fadeOutTime = 8;
+        let fadeInTime = 8;
+
+        function getSegmentDuration(fullDuration) {
+            return Math.floor(fullDuration / 3);
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function initPlaylist() {
+            const container = document.getElementById('songList');
+            let html = '';
+            
+            songs.forEach((song, index) => {
+                // 标签HTML - 超小字号
+                const tagsHtml = song.tags.map(tag => 
+                    `<span class="px-1 py-0 text-[9px] leading-tight border rounded ${tag === 'VIP' ? 'border-red-200 text-red-500' : 'border-amber-200 text-amber-600'}">${tag}</span>`
+                ).join('');
+                
+                html += `
+                    <div class="flex items-center gap-3 py-3 border-b border-gray-100">
+                        <div class="w-12 h-12 rounded bg-gray-200 flex-shrink-0 overflow-hidden">
+                            <img src="https://picsum.photos/seed/${song.cover}/100/100" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-[15px] font-medium text-gray-900 truncate mb-1 leading-tight">${song.name}</h3>
+                            <!-- 标签、艺人、专辑全部放在一行，超小字号 -->
+                            <div class="flex items-center gap-1.5 text-[10px] text-gray-500 truncate leading-tight">
+                                ${tagsHtml}
+                                <span class="truncate">${song.artist} - ${song.album}</span>
+                            </div>
+                        </div>
+                        <button class="w-8 h-8 flex items-center justify-center text-gray-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                        </button>
+                    </div>
+                `;
+                
+                if (index < songs.length - 1) {
+                    html += `
+                        <div class="flex items-center justify-center py-2 relative">
+                            <div class="absolute inset-0 flex items-center px-12">
+                                <div class="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+                            </div>
+                            <button onclick="openEditor(${index})" class="relative z-10 edit-mix-btn px-4 py-2 rounded-full text-white text-xs font-medium flex items-center gap-1.5 transition-transform">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                mix歌曲
+                            </button>
+                        </div>
+                    `;
+                }
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function generateWaveform(elementId, isEnding) {
+            const container = document.getElementById(elementId);
+            if (!container) return;
+            container.innerHTML = '';
+            const barCount = 40;
+            
+            for (let i = 0; i < barCount; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'wave-bar';
+                
+                let height;
+                if (isEnding) {
+                    const fadeOut = i / barCount;
+                    const baseEnergy = 50 + Math.random() * 30;
+                    height = baseEnergy * (1 - fadeOut * 0.4);
+                } else {
+                    const fadeIn = 1 - (i / barCount);
+                    const baseEnergy = 40 + Math.random() * 35;
+                    height = baseEnergy * (0.6 + fadeIn * 0.4);
+                }
+                
+                bar.style.height = `${Math.min(90, Math.max(15, height))}%`;
+                bar.dataset.originalHeight = height;
+                container.appendChild(bar);
+            }
+        }
+
+        function openEditor(pairIndex) {
+            currentPair = pairIndex;
+            
+            const songA = songs[pairIndex];
+            const songB = songs[pairIndex + 1];
+            
+            if (!songA || !songB) return;
+            
+            document.getElementById('songAName').textContent = songA.name;
+            document.getElementById('songAArtist').textContent = songA.artist;
+            document.getElementById('coverA').src = `https://picsum.photos/seed/${songA.cover}/100/100`;
+            
+            document.getElementById('songBName').textContent = songB.name;
+            document.getElementById('songBArtist').textContent = songB.artist;
+            document.getElementById('coverB').src = `https://picsum.photos/seed/${songB.cover}/100/100`;
+            
+            document.getElementById('editorSubtitle').textContent = `${songA.name} → ${songB.name}`;
+            
+            const segmentA = getSegmentDuration(songA.duration);
+            const segmentB = getSegmentDuration(songB.duration);
+            
+            const startOfSegmentA = songA.duration - segmentA;
+            document.getElementById('startRangeA').textContent = formatTime(startOfSegmentA);
+            document.getElementById('endTimeA').textContent = `结束于 ${formatTime(songA.duration)}`;
+            document.getElementById('durationA').textContent = formatTime(songA.duration);
+            
+            document.getElementById('endRangeB').textContent = formatTime(segmentB);
+            
+            const sliderA = document.getElementById('sliderA');
+            const sliderB = document.getElementById('sliderB');
+            sliderA.max = segmentA;
+            sliderB.max = segmentB;
+            
+            sliderA.oninput = function() { updateTime('A', this.value); };
+            sliderB.oninput = function() { updateTime('B', this.value); };
+            
+            sliderA.value = Math.floor(segmentA * 0.7);
+            sliderB.value = Math.floor(segmentB * 0.15);
+            
+            updateTime('A', sliderA.value);
+            updateTime('B', sliderB.value);
+            
+            generateWaveform('waveformA', true);
+            generateWaveform('waveformB', false);
+            generateWaveform('transWaveA', true);
+            generateWaveform('transWaveB', false);
+            
+            const editorView = document.getElementById('editorView');
+            editorView.classList.remove('hidden');
+            editorView.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+            
+            checkWarnings();
+        }
+
+        function updateTime(song, value) {
+            const segmentValue = parseInt(value);
+            const songA = songs[currentPair];
+            const songB = songs[currentPair + 1];
+            
+            if (song === 'A') {
+                const segmentDuration = getSegmentDuration(songA.duration);
+                const fullTime = (songA.duration - segmentDuration) + segmentValue;
+                document.getElementById('timeA').textContent = formatTime(fullTime);
+                document.getElementById('remainingA').textContent = `距结束 ${songA.duration - fullTime}s`;
+                const pct = (segmentValue / segmentDuration) * 100;
+                document.getElementById('playheadA').style.left = `${pct}%`;
+            } else {
+                const segmentDuration = getSegmentDuration(songB.duration);
+                const fullTime = segmentValue;
+                document.getElementById('timeB').textContent = formatTime(fullTime);
+                document.getElementById('remainingB').textContent = `距开始 ${fullTime}s`;
+                const pct = (segmentValue / segmentDuration) * 100;
+                document.getElementById('playheadB').style.left = `${pct}%`;
+            }
+            
+            checkWarnings();
+        }
+
+        function checkWarnings() {
+            const songA = songs[currentPair];
+            const songB = songs[currentPair + 1];
+            const segmentA = getSegmentDuration(songA.duration);
+            
+            const valueA = parseInt(document.getElementById('sliderA').value);
+            const valueB = parseInt(document.getElementById('sliderB').value);
+            
+            const fullTimeA = (songA.duration - segmentA) + valueA;
+            const remainingA = songA.duration - fullTimeA;
+            
+            const warningBox = document.getElementById('warningBox');
+            const warningText = document.getElementById('warningText');
+            
+            if (remainingA < fadeOutTime || valueB < 3) {
+                warningBox.classList.remove('hidden');
+                if (remainingA < fadeOutTime) {
+                    warningText.textContent = `当前位置距结束仅${remainingA}秒，建议提前设置`;
+                } else {
+                    warningText.textContent = `当前位置距开始仅${valueB}秒，建议往后设置`;
+                }
+            } else {
+                warningBox.classList.add('hidden');
+            }
+        }
+
+        function toggleMixPreview() {
+            if (isMixing) {
+                stopMixPreview();
+            } else {
+                startMixPreview();
+            }
+        }
+
+        function startMixPreview() {
+            isMixing = true;
+            const btn = document.getElementById('previewBtn');
+            const icon = document.getElementById('previewIcon');
+            const status = document.getElementById('previewStatus');
+            
+            btn.classList.remove('bg-red-500');
+            btn.classList.add('bg-gray-800');
+            icon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            status.textContent = '试听中...';
+            status.classList.add('text-red-500');
+            
+            const sliderA = document.getElementById('sliderA');
+            const sliderB = document.getElementById('sliderB');
+            const songA = songs[currentPair];
+            const songB = songs[currentPair + 1];
+            const segmentA = getSegmentDuration(songA.duration);
+            const segmentB = getSegmentDuration(songB.duration);
+            
+            const posInSegmentA = parseInt(sliderA.value) / parseInt(sliderA.max);
+            const posInSegmentB = parseInt(sliderB.value) / parseInt(sliderB.max);
+            
+            const startA = (songA.duration - segmentA) + (posInSegmentA * segmentA);
+            const startB = posInSegmentB * segmentB;
+            
+            let currentStep = 0;
+            const totalSteps = (fadeOutTime + fadeInTime) * 20;
+            
+            playIntervals['mix'] = setInterval(() => {
+                currentStep++;
+                const progress = (currentStep / totalSteps) * 100;
+                
+                document.getElementById('transPlayhead').style.left = `${progress}%`;
+                
+                const fadeOutRatio = fadeOutTime / (fadeOutTime + fadeInTime);
+                let volA, volB;
+                
+                if (progress < fadeOutRatio * 100) {
+                    const phaseProgress = progress / (fadeOutRatio * 100);
+                    volA = Math.cos(phaseProgress * Math.PI / 2);
+                    volB = Math.sin(phaseProgress * Math.PI / 2) * 0.3;
+                    document.getElementById('transTimeA').textContent = `-${Math.ceil((1-phaseProgress) * fadeOutTime)}s`;
+                    document.getElementById('transTimeB').textContent = `+${Math.floor(phaseProgress * fadeInTime)}s`;
+                } else {
+                    const phaseProgress = (progress - fadeOutRatio * 100) / ((1 - fadeOutRatio) * 100);
+                    volA = Math.cos((0.5 + phaseProgress * 0.5) * Math.PI) * 0.3;
+                    volB = Math.sin((0.5 + phaseProgress * 0.5) * Math.PI);
+                    document.getElementById('transTimeA').textContent = `结束`;
+                    document.getElementById('transTimeB').textContent = `+${Math.floor(phaseProgress * fadeInTime)}s`;
+                }
+                
+                updateWaveformAnim('transWaveA', volA);
+                updateWaveformAnim('transWaveB', volB);
+                
+                const timeA = progress < fadeOutRatio * 100 ? 
+                    startA + (progress / (fadeOutRatio * 100)) * fadeOutTime : 
+                    startA + fadeOutTime;
+                const timeB = progress < fadeOutRatio * 100 ?
+                    startB :
+                    startB + ((progress - fadeOutRatio * 100) / ((1 - fadeOutRatio) * 100)) * fadeInTime;
+                
+                const segmentProgressA = ((timeA - (songA.duration - segmentA)) / segmentA) * 100;
+                const segmentProgressB = (timeB / segmentB) * 100;
+                
+                document.getElementById('playheadA').style.left = `${Math.min(100, Math.max(0, segmentProgressA))}%`;
+                document.getElementById('playheadB').style.left = `${Math.min(100, Math.max(0, segmentProgressB))}%`;
+                
+                if (currentStep >= totalSteps) currentStep = 0;
+            }, 50);
+        }
+
+        function stopMixPreview() {
+            isMixing = false;
+            clearInterval(playIntervals['mix']);
+            delete playIntervals['mix'];
+            
+            const btn = document.getElementById('previewBtn');
+            const icon = document.getElementById('previewIcon');
+            const status = document.getElementById('previewStatus');
+            
+            btn.classList.remove('bg-gray-800');
+            btn.classList.add('bg-red-500');
+            icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+            status.textContent = '点击试听衔接效果';
+            status.classList.remove('text-red-500');
+            
+            document.getElementById('transPlayhead').style.left = '0%';
+            updateWaveformAnim('transWaveA', 1);
+            updateWaveformAnim('transWaveB', 1);
+            document.getElementById('transTimeA').textContent = `-${fadeOutTime}s`;
+            document.getElementById('transTimeB').textContent = `+${fadeInTime}s`;
+            
+            const sliderA = document.getElementById('sliderA');
+            const sliderB = document.getElementById('sliderB');
+            updateTime('A', sliderA.value);
+            updateTime('B', sliderB.value);
+        }
+
+        function updateWaveformAnim(elementId, intensity) {
+            const container = document.getElementById(elementId);
+            const bars = container.querySelectorAll('.wave-bar');
+            bars.forEach((bar, index) => {
+                const original = parseFloat(bar.dataset.originalHeight) || 50;
+                const variation = Math.sin(Date.now() / 200 + index) * 0.1 + 0.9;
+                bar.style.height = `${original * intensity * variation}%`;
+                bar.style.opacity = intensity < 0.1 ? 0.2 : (intensity * 0.7 + 0.3);
+                
+                if (intensity > 0.7) bar.classList.add('active');
+                else bar.classList.remove('active');
+            });
+        }
+
+        function playSong(song) {
+            if (isMixing) return;
+            
+            stopAllPlayback();
+            const btn = document.getElementById(`playBtn${song}`);
+            btn.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+            
+            const slider = document.getElementById(`slider${song}`);
+            const segmentValue = parseInt(slider.value);
+            const currentSong = song === 'A' ? songs[currentPair] : songs[currentPair + 1];
+            const segmentDuration = getSegmentDuration(currentSong.duration);
+            
+            let fullTime;
+            if (song === 'A') {
+                fullTime = (currentSong.duration - segmentDuration) + segmentValue;
+            } else {
+                fullTime = segmentValue;
+            }
+            
+            let currentTime = fullTime;
+            const maxTime = song === 'A' ? currentSong.duration : Math.min(currentSong.duration, segmentDuration * 1.5);
+            
+            playIntervals[song] = setInterval(() => {
+                currentTime += 1;
+                if (currentTime >= maxTime) {
+                    stopSong(song);
+                    return;
+                }
+                
+                const startTime = song === 'A' ? (currentSong.duration - segmentDuration) : 0;
+                const pct = ((currentTime - startTime) / (maxTime - startTime)) * 100;
+                document.getElementById(`progress${song}`).style.width = `${pct}%`;
+                
+                if (song === 'A' && currentTime >= currentSong.duration - segmentDuration && currentTime <= currentSong.duration) {
+                    const segmentPos = currentTime - (currentSong.duration - segmentDuration);
+                    slider.value = segmentPos;
+                    updateTime('A', segmentPos);
+                } else if (song === 'B' && currentTime <= segmentDuration) {
+                    slider.value = currentTime;
+                    updateTime('B', currentTime);
+                }
+            }, 1000);
+        }
+
+        function stopSong(song) {
+            if (playIntervals[song]) {
+                clearInterval(playIntervals[song]);
+                delete playIntervals[song];
+            }
+            const btn = document.getElementById(`playBtn${song}`);
+            btn.innerHTML = '<svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+            document.getElementById(`progress${song}`).style.width = '0%';
+        }
+
+        function stopAllPlayback() {
+            Object.keys(playIntervals).forEach(key => {
+                clearInterval(playIntervals[key]);
+                if (key === 'A' || key === 'B') {
+                    const btn = document.getElementById(`playBtn${key}`);
+                    if (btn) btn.innerHTML = '<svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                    const progress = document.getElementById(`progress${key}`);
+                    if (progress) progress.style.width = '0%';
+                }
+            });
+            playIntervals = {};
+        }
+
+        function closeEditor() {
+            if (isMixing) stopMixPreview();
+            document.getElementById('cancelModal').classList.remove('hidden');
+        }
+
+        function closeCancelModal() {
+            document.getElementById('cancelModal').classList.add('hidden');
+        }
+
+        function confirmCancel() {
+            document.getElementById('cancelModal').classList.add('hidden');
+            const editorView = document.getElementById('editorView');
+            editorView.classList.add('hidden');
+            editorView.classList.remove('flex');
+            document.body.style.overflow = '';
+            stopAllPlayback();
+        }
+
+        function saveMix() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '保存中...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                
+                const toast = document.getElementById('successToast');
+                toast.classList.remove('-translate-y-20', 'opacity-0');
+                
+                setTimeout(() => {
+                    toast.classList.add('-translate-y-20', 'opacity-0');
+                    confirmCancel();
+                }, 1500);
+            }, 800);
+        }
+
+        document.addEventListener('DOMContentLoaded', initPlaylist);
+    </script>
+</body>
+</html>
